@@ -60,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isMusicPlayerInit;
     private List<String> musicFilesList;
+    private List<String> musicFilesName;
 
     private void addMusicFilesFrom(String dirPath){
         final File musicDir = new File(dirPath);
@@ -72,12 +73,14 @@ public class MainActivity extends AppCompatActivity {
             final String path = file.getAbsolutePath();
             if(path.endsWith(".mp3")){
                 musicFilesList.add(path);
+                musicFilesName.add(path);
             }
         }
     }
 
     private void fillMusicList(){
         musicFilesList.clear();
+        musicFilesName.clear();
         addMusicFilesFrom(String.valueOf(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_MUSIC)));
         addMusicFilesFrom(String.valueOf(Environment.getExternalStoragePublicDirectory(
@@ -97,6 +100,11 @@ public class MainActivity extends AppCompatActivity {
         } catch(Exception e){
             e.printStackTrace();
         }
+        mp.setVolume(0.5f,0.5f);
+        //change
+        pp = mp.getPlaybackParams();
+        pp.setSpeed(1.0f*playBack);
+        mp.setPlaybackParams(pp);
         return mp.getDuration();
     }
 
@@ -106,76 +114,13 @@ public class MainActivity extends AppCompatActivity {
     private boolean firstPlay = true;
     private int playBack = 2; //change place
 //change to go back -> shouldn't spawn new thread everytimes it's called -> make a first boolean to block
-    private void playSong(){
-        final String musicFilePath = musicFilesList.get(mPosition);
-        final int songDuration = playMusicFile(musicFilePath)/1000;
-        seekBar.setMax(songDuration);
-        seekBar.setVisibility(View.VISIBLE);
-        playbackControls.setVisibility(View.VISIBLE);
-        int durRemainder = songDuration%60;
-        String dur = "";
-        if(durRemainder<10){
-            dur = "0";
-        }
-        songDurationTextView.setText(String.valueOf(songDuration/60)+":"+dur
-                +String.valueOf(songDuration%60));
-        if(firstPlay){
-            mp.setVolume(0.5f,0.5f);
-            pp = mp.getPlaybackParams();
-            pp.setSpeed(1.0f*playBack);
-            mp.setPlaybackParams(pp);
-
-        }
-        new Thread(){
-            public void run(){
-                songPosition = 0;
-                isSongPlaying = true;
-                while(songPosition<songDuration){
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    if(isSongPlaying) {
-                        songPosition+= 1*playBack;
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                seekBar.setProgress(songPosition);
-                                int posRemainder = songDuration%60;
-                                String pos = "";
-                                if(posRemainder<10){
-                                    pos = "0";
-                                }
-                                songPositionTextView.setText(String.valueOf(songPosition / 60) + ":"+pos
-                                        + String.valueOf(songPosition % 60));
-                            }
-                        });
-                    }
-                }
-//                runOnUiThread(new Runnable() {
-//                    @Override
-//                    public void run() {
-                        mPosition++;
-                        mp.pause();
-//                        songPosition = 0;
-//                        mp.seekTo(songPosition);
-                        songPositionTextView.setText("0");
-                        isSongPlaying = false;
-//                        seekBar.setProgress(songPosition);
-//                        pauseButton.setText("play");
-//                playSong();
-//                    }
-//                });
-            }
-        }.start();
-    }
 
     private TextView songPositionTextView;
     private TextView songDurationTextView;
     private SeekBar seekBar;
     private View playbackControls;
     private Button pauseButton;
+    private playMusic current;
 
 
     //when app is active
@@ -188,12 +133,21 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if(!isMusicPlayerInit){
+            final TextAdapter storeName = new TextAdapter();
             final ListView listView = findViewById(R.id.listView);
             final TextAdapter textAdapter = new TextAdapter();
             musicFilesList = new ArrayList<>();
+            musicFilesName = new ArrayList<>();
             fillMusicList();
+            for(int i = 0; i<musicFilesName.size(); i++){
+                String name = musicFilesName.get(i);
+                int dot = musicFilesName.get(i).indexOf(".");
+                name = name.substring(0,dot);
+                musicFilesName.set(i,name);
+            }
+            storeName.setData(musicFilesName);
             textAdapter.setData(musicFilesList);
-            listView.setAdapter(textAdapter);
+            listView.setAdapter(storeName);
             seekBar = findViewById(R.id.seekBar);
             seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 int songProgress;
@@ -213,6 +167,8 @@ public class MainActivity extends AppCompatActivity {
                 public void onStopTrackingTouch(SeekBar seekBar) {
                     songPosition = songProgress;
                     mp.seekTo(songProgress*1000);
+                    current.updateProgress();
+
                 }
             });
 
@@ -228,11 +184,7 @@ public class MainActivity extends AppCompatActivity {
                         mp.pause();
                         pauseButton.setText("play");
                     } else {
-                        if(songPosition==0){
-                            playSong();
-                        }else{
-                            mp.start();
-                        }
+                        mp.start();
                         pauseButton.setText("pause");
                     } isSongPlaying = !isSongPlaying;
                 }
@@ -243,7 +195,13 @@ public class MainActivity extends AppCompatActivity {
                 //clicking the music name
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id){
                     mPosition = position;
-                    playSong();
+                    if(firstPlay){
+                        current = new playMusic(mPosition);
+                        current.start();
+                        firstPlay = false;
+                    } else {
+                        current.playTrack();
+                    }
                 }
             });
 
@@ -269,9 +227,70 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
             );
-
-
             isMusicPlayerInit = true;
+        }
+    }
+
+    class playMusic extends Thread {
+        String musicFilePath;
+        int songDuration;
+        playMusic(int position){
+            reset();
+            seekBar.setVisibility(View.VISIBLE);
+            playbackControls.setVisibility(View.VISIBLE);
+        }
+        public void run(){
+            isSongPlaying = true;
+            while(true){
+                while(songPosition<songDuration){
+                    try {
+                        Thread.sleep(1000/playBack);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    if(isSongPlaying) {
+                        songPosition+= 1;
+                        seekBar.setProgress(songPosition);
+                        updateProgress();
+                    }
+                }
+                mPosition++;
+                songPositionTextView.setText("0");
+                playTrack();
+            }
+        }
+        public void playTrack(){
+            mp.pause();
+            reset();
+        }
+        public void reset(){
+            if(mPosition >= musicFilesList.size()){
+                mPosition = 0;
+            }
+            musicFilePath  = musicFilesList.get(mPosition);
+            songDuration = playMusicFile(musicFilePath)/1000;
+            songPosition = 0;
+            seekBar.setMax(songDuration);
+            seekBar.setProgress(0);
+            pauseButton.setText("pause");
+            isSongPlaying = true;
+            int durRemainder = songDuration%60;
+            String dur = "";
+            if(durRemainder<10){
+                dur = "0";
+            }
+            songDurationTextView.setText(String.valueOf(songDuration/60)+":"+dur
+                    +String.valueOf(songDuration%60));
+            updateProgress();
+        }
+        public void updateProgress(){
+            int posRemainder = songPosition%60;
+            String pos = "";
+            if(posRemainder<10){
+                pos = "0";
+            }
+            songPositionTextView.setText(String.valueOf(songPosition / 60) + ":"+pos
+                    + String.valueOf(songPosition % 60));
         }
     }
 
