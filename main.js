@@ -2,6 +2,7 @@ package com.example.musicplayer;
 
 import androidx.annotation.MainThread;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.app.ActivityManager;
@@ -13,19 +14,24 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -88,6 +94,8 @@ public class MainActivity extends AppCompatActivity {
                 Environment.DIRECTORY_MUSIC)));
         addMusicFilesFrom(String.valueOf(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS)));
+        Collections.sort(musicFilesList);
+        Collections.sort(musicFilesName);
     }
 
     private MediaPlayer mp; //music object
@@ -127,10 +135,15 @@ public class MainActivity extends AppCompatActivity {
     private TextView playbackText;
     private int songPos = 0;
     private boolean next = true;
-    private ListView listView;
+    private LinearLayout listView;
     private float volume = 0.5f;
     private boolean loop = false;
     private Button loopBtn;
+    private Button nextBtn;
+    private Button prevBtn;
+    private TextView[] musicList;
+    private ScrollView scroller;
+    private SeekBar verticalScroll;
 
     //when app is active
     @Override
@@ -142,6 +155,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         if(!isMusicPlayerInit){ //initialized
+            scroller = findViewById(R.id.scrollView);
             final TextAdapter storeName = new TextAdapter();
             final TextAdapter textAdapter = new TextAdapter();
             listView = findViewById(R.id.listView);
@@ -151,12 +165,53 @@ public class MainActivity extends AppCompatActivity {
             for(int i = 0; i<musicFilesName.size(); i++){ //remove file type in title
                 String name = musicFilesName.get(i);
                 int dot = musicFilesName.get(i).indexOf(".mp3");
-                name = name.substring(0,dot);
+                int slash = musicFilesName.get(i).lastIndexOf("/")+1;
+                name = name.substring(slash,dot);
                 musicFilesName.set(i,name);
             }
             storeName.setData(musicFilesName);
             textAdapter.setData(musicFilesList);
-            listView.setAdapter(storeName); //title label
+            musicList = new TextView[musicFilesList.size()];
+            for(int i = 0; i<musicFilesList.size(); i++){
+                musicList[i] = new TextView(getApplication());
+                musicList[i].setLines(3);
+                musicList[i].setTextColor(Color.BLACK);
+                musicList[i].setGravity(Gravity.CENTER);
+                musicList[i].setText(musicFilesName.get(i));
+                musicList[i].setBackgroundResource(R.drawable.border);
+                listView.addView(musicList[i],i,new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+                final int finalI = i;
+                musicList[i].setOnClickListener(new View.OnClickListener(){
+                    @Override
+                    public void onClick(View v){
+                        Log.d("run","RUnning");
+                        mPosition = finalI;
+                        if(firstPlay){
+                            lastSong = finalI;
+                        }
+                        if(firstPlay){ //first one clicked when app is started
+                            current = new playMusic(mPosition); //makes sure only 1 object and 1 thread is made
+                            current.start(); //starts thread
+                            firstPlay = false;
+                        } else {
+                            current.playTrack(); //switching song, resets song
+                        }
+
+                    }
+                });
+            }
+
+            scroller.getViewTreeObserver().addOnScrollChangedListener(new ViewTreeObserver.OnScrollChangedListener() {
+
+                @Override
+                public void onScrollChanged() {
+                    int max = scroller.getChildAt(0).getHeight()-scroller.getHeight();
+                    double step = (double)max/(double)verticalScroll.getMax();
+                    int scrollY = scroller.getScrollY(); //for verticalScrollView
+                    verticalScroll.setProgress((int)(scrollY/step));
+                }
+            });
 
             seekBar = findViewById(R.id.seekBar); //music position
             seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -185,6 +240,29 @@ public class MainActivity extends AppCompatActivity {
             playbackControls = findViewById(R.id.playBackButton);
             playbackText = findViewById(R.id.playbackText);
             loopBtn = findViewById(R.id.loopButton);
+            nextBtn = findViewById(R.id.nextBtn);
+            prevBtn = findViewById(R.id.prevBtn);
+            verticalScroll = findViewById(R.id.verticalScroll);
+
+            verticalScroll.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                int progress;
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                    int max = scroller.getChildAt(0).getHeight()-scroller.getHeight();
+                    double step = (double)max/(double)verticalScroll.getMax();
+                    progress = (int)(i*step);
+                    scroller.scrollTo(0,progress);
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                }
+            });
 
             playback = findViewById(R.id.playBack);
             playback.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -226,6 +304,28 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+            prevBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    mPosition--;
+                    if(mPosition<0){
+                        mPosition = musicFilesList.size()-1;
+                    }
+                    current.playTrack();
+                }
+            });
+
+            nextBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    mPosition++;
+                    if(mPosition>(musicFilesList.size()-1)){
+                        mPosition = 0;
+                    }
+                    current.playTrack();
+                }
+            });
+
             loopBtn.setOnClickListener(new View.OnClickListener(){
                 @Override
                 public void onClick(View v){
@@ -236,24 +336,6 @@ public class MainActivity extends AppCompatActivity {
                     } else {
                         mp.setLooping(false);
                         loopBtn.setText("loop");
-                    }
-                }
-            });
-
-            listView.setOnItemClickListener(new AdapterView.OnItemClickListener(){ //clicking on title label
-                @Override
-                //clicking the music name
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id){
-                    lastSong = mPosition;
-                    mPosition = position;
-                    listView.getChildAt(lastSong).setBackgroundColor(Color.WHITE);
-                    listView.getChildAt(position).setBackgroundColor(Color.GRAY);
-                    if(firstPlay){ //first one clicked when app is started
-                        current = new playMusic(mPosition); //makes sure only 1 object and 1 thread is made
-                        current.start(); //starts thread
-                        firstPlay = false;
-                    } else {
-                        current.playTrack(); //switching song, resets song
                     }
                 }
             });
@@ -293,6 +375,8 @@ public class MainActivity extends AppCompatActivity {
             //visible position track and btns
             seekBar.setVisibility(View.VISIBLE);
             playbackControls.setVisibility(View.VISIBLE);
+            nextBtn.setVisibility(View.VISIBLE);
+            prevBtn.setVisibility(View.VISIBLE);
         }
         public void run(){
             isSongPlaying = true;
@@ -337,8 +421,8 @@ public class MainActivity extends AppCompatActivity {
             runOnUiThread(new Runnable(){
                 @Override
                 public void run(){
-                    listView.getChildAt(lastSong).setBackgroundColor(Color.WHITE);
-                    listView.getChildAt(mPosition).setBackgroundColor(Color.GRAY);
+                    musicList[lastSong].setBackgroundResource(R.drawable.border);
+                    musicList[mPosition].setBackgroundColor(Color.GRAY);
                     lastSong = mPosition;
                 }
             });
@@ -416,19 +500,21 @@ public class MainActivity extends AppCompatActivity {
     }
 }
 
-//changes
-
 //add new page for track controls
-//sort music alphabetically
 //random
 //title on user control
-//side scrollbar + alphabet sorting
+//alphabet sorting
+//search function
+
+
+//https://programmer.group/5c44cf15f28a9.html
+//alphabetical sorting, sorting with chinese chars
+
 
 //add comments
 //publish
 //allows rename
 //allows album
-//add skip button and go back button
 //add logo
 //add about page
 

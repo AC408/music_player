@@ -3,26 +3,48 @@
     android:orientation="vertical" android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+
+    <SeekBar
+        android:layout_width="570dp"
+        android:layout_height="wrap_content"
+        android:rotation="90"
+        android:id="@+id/verticalScroll"
+        android:progress="0"
+        android:min="0"
+        android:max="10000"
+        android:translationX="160dp"
+        android:translationY="260dp"
+        android:translationZ="1dp" />
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="570dp"
         android:id="@+id/scrollView"
-        android:fillViewport="true">
+        android:fillViewport="true"
+        android:scrollbars="none">
 
-        <ListView
+        <LinearLayout
             android:id="@+id/listView"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"/>
+            android:layout_width="360dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+        </LinearLayout>
+
 
     </ScrollView>
+
 
     <LinearLayout
         android:id="@+id/playBackButton"
         android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:layout_above="@id/seekBar">
 
         <TextView
             android:id="@+id/currentPosition"
@@ -36,14 +58,14 @@
             android:id="@+id/pauseButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_weight="2"
             android:text="pause" />
 
         <Button
             android:id="@+id/loopButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_weight="2"
             android:text="loop" />
 
         <TextView
@@ -61,15 +83,16 @@
         android:id="@+id/seekBar"
         android:visibility="gone"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-
+        android:layout_height="wrap_content"
+        android:layout_above="@id/playBackSpeed"/>
 
     <LinearLayout
         android:id="@+id/playBackSpeed"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:layout_above="@+id/controls">
 
         <TextView
             android:id="@+id/playbackText"
@@ -87,7 +110,8 @@
         android:orientation="horizontal"
         android:id="@+id/controls"
         android:gravity="center"
-        android:layout_marginTop="2dp">
+        android:layout_marginTop="2dp"
+        android:layout_above="@+id/volume">
 
         <Button
             android:layout_width="0dp"
@@ -105,7 +129,7 @@
             android:progress="50"
             android:max="100"
             android:layout_weight="12"
-            android:min="0"/>
+            android:min="1"/>
 
         <Button
             android:layout_width="0dp"
@@ -118,10 +142,13 @@
 
     </LinearLayout>
 
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="1dp" android:gravity="center">
+    <LinearLayout
+        android:id="@+id/volume" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="1dp" android:gravity="center"
+        android:layout_alignParentBottom="true">
         <ImageView android:layout_width="25dp" android:layout_height="25dp" android:src="@drawable/sound_down"/>
         <SeekBar android:id="@+id/volumeBar" android:layout_width="300dp" android:layout_height="wrap_content" android:progress="50" android:max="100"/>
         <ImageView android:layout_width="25dp" android:layout_height="25dp" android:src="@drawable/sound_up"/>
     </LinearLayout>
+    </RelativeLayout>
 
 </LinearLayout>
