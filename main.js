@@ -1,10 +1,12 @@
 package com.example.musicplayer;
 
+import androidx.annotation.MainThread;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.Manifest;
 import android.app.ActivityManager;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.media.PlaybackParams;
 import android.os.Build;
@@ -78,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    //fills arraylist with music directory path
     private void fillMusicList(){
         musicFilesList.clear();
         musicFilesName.clear();
@@ -87,41 +90,47 @@ public class MainActivity extends AppCompatActivity {
                 Environment.DIRECTORY_DOWNLOADS)));
     }
 
-    private MediaPlayer mp;
-    private PlaybackParams pp;
+    private MediaPlayer mp; //music object
+    private PlaybackParams pp; //for playback speed
 
-
+    //plays music, sets default value (volume, playback speed)
     private int playMusicFile(String path){
         mp = new MediaPlayer();
         try{
             mp.setDataSource(path);
             mp.prepare();
             mp.start();
+            pp = mp.getPlaybackParams();
+            pp.setSpeed((float)((float)playSpeed/50));
+            mp.setPlaybackParams(pp);
         } catch(Exception e){
             e.printStackTrace();
         }
         mp.setVolume(0.5f,0.5f);
-        //change
-        pp = mp.getPlaybackParams();
-        pp.setSpeed(1.0f*playBack);
-        mp.setPlaybackParams(pp);
         return mp.getDuration();
     }
 
     private int songPosition;
     private volatile boolean isSongPlaying;
-    private int mPosition;
-    private boolean firstPlay = true;
-    private int playBack = 2; //change place
-//change to go back -> shouldn't spawn new thread everytimes it's called -> make a first boolean to block
+    private int mPosition = 0; //position of song
+    private boolean firstPlay = true; //only occurs once
+    private int playSpeed = 50; //change place
 
     private TextView songPositionTextView;
     private TextView songDurationTextView;
-    private SeekBar seekBar;
+    private SeekBar seekBar; //for song position
     private View playbackControls;
     private Button pauseButton;
-    private playMusic current;
-
+    private playMusic current; //curent music being played
+    private int lastSong = 0;
+    private SeekBar playback;
+    private TextView playbackText;
+    private int songPos = 0;
+    private boolean next = true;
+    private ListView listView;
+    private float volume = 0.5f;
+    private boolean loop = false;
+    private Button loopBtn;
 
     //when app is active
     @Override
@@ -132,75 +141,119 @@ public class MainActivity extends AppCompatActivity {
             requestPermissions(PERMISSIONS, REQUEST_PERMISSIONS);
             return;
         }
-        if(!isMusicPlayerInit){
+        if(!isMusicPlayerInit){ //initialized
             final TextAdapter storeName = new TextAdapter();
-            final ListView listView = findViewById(R.id.listView);
             final TextAdapter textAdapter = new TextAdapter();
+            listView = findViewById(R.id.listView);
             musicFilesList = new ArrayList<>();
             musicFilesName = new ArrayList<>();
             fillMusicList();
-            for(int i = 0; i<musicFilesName.size(); i++){
+            for(int i = 0; i<musicFilesName.size(); i++){ //remove file type in title
                 String name = musicFilesName.get(i);
-                int dot = musicFilesName.get(i).indexOf(".");
+                int dot = musicFilesName.get(i).indexOf(".mp3");
                 name = name.substring(0,dot);
                 musicFilesName.set(i,name);
             }
             storeName.setData(musicFilesName);
             textAdapter.setData(musicFilesList);
-            listView.setAdapter(storeName);
-            seekBar = findViewById(R.id.seekBar);
+            listView.setAdapter(storeName); //title label
+
+            seekBar = findViewById(R.id.seekBar); //music position
             seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 int songProgress;
 
                 @Override
                 public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                     songProgress = progress;
-
                 }
 
                 @Override
                 public void onStartTrackingTouch(SeekBar seekBar) {
-
                 }
 
                 @Override
                 public void onStopTrackingTouch(SeekBar seekBar) {
                     songPosition = songProgress;
                     mp.seekTo(songProgress*1000);
-                    current.updateProgress();
-
+                    current.updateProgress(); //updates position label
                 }
             });
 
-            songPositionTextView = findViewById(R.id.currentPosition);
-            songDurationTextView = findViewById(R.id.songDuration);
-            pauseButton = findViewById(R.id.pauseButton);
+            songPositionTextView = findViewById(R.id.currentPosition); //text
+            songDurationTextView = findViewById(R.id.songDuration); //text
+            pauseButton = findViewById(R.id.pauseButton); //btn
             playbackControls = findViewById(R.id.playBackButton);
+            playbackText = findViewById(R.id.playbackText);
+            loopBtn = findViewById(R.id.loopButton);
 
-            pauseButton.setOnClickListener(new View.OnClickListener(){
+            playback = findViewById(R.id.playBack);
+            playback.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                int speed;
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean b) {
+                    speed = progress;
+                    playbackText.setText("playback speed: "+String.valueOf((double)speed/50));
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    playSpeed = speed;
+                    if(mp!=null) {
+                        next = false;
+                        songPos = mp.getCurrentPosition();
+                        current.playTrack();
+                        songPosition = songPos / 1000;
+                        mp.seekTo(songPos);
+                        next = true;
+                    }
+                }
+            });
+
+            pauseButton.setOnClickListener(new View.OnClickListener(){ //when btn is clicked
                 @Override
                 public void onClick(View v){
                     if(isSongPlaying){
-                        mp.pause();
+                        mp.pause(); //stops song if song is playing
                         pauseButton.setText("play");
                     } else {
-                        mp.start();
+                        mp.start(); //starts song
                         pauseButton.setText("pause");
                     } isSongPlaying = !isSongPlaying;
                 }
             });
 
-            listView.setOnItemClickListener(new AdapterView.OnItemClickListener(){
+            loopBtn.setOnClickListener(new View.OnClickListener(){
+                @Override
+                public void onClick(View v){
+                    loop = !loop;
+                    if(loop){
+                        mp.setLooping(true);
+                        loopBtn.setText("continue");
+                    } else {
+                        mp.setLooping(false);
+                        loopBtn.setText("loop");
+                    }
+                }
+            });
+
+            listView.setOnItemClickListener(new AdapterView.OnItemClickListener(){ //clicking on title label
                 @Override
                 //clicking the music name
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id){
+                    lastSong = mPosition;
                     mPosition = position;
-                    if(firstPlay){
-                        current = new playMusic(mPosition);
-                        current.start();
+                    listView.getChildAt(lastSong).setBackgroundColor(Color.WHITE);
+                    listView.getChildAt(position).setBackgroundColor(Color.GRAY);
+                    if(firstPlay){ //first one clicked when app is started
+                        current = new playMusic(mPosition); //makes sure only 1 object and 1 thread is made
+                        current.start(); //starts thread
                         firstPlay = false;
                     } else {
-                        current.playTrack();
+                        current.playTrack(); //switching song, resets song
                     }
                 }
             });
@@ -212,78 +265,100 @@ public class MainActivity extends AppCompatActivity {
                     new SeekBar.OnSeekBarChangeListener() {
                         @Override
                         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                            float volumeNum = progress / 100f;
-                            mp.setVolume(volumeNum, volumeNum);
+                            volume = progress / 100f;
+                            if(mp!=null){
+                                mp.setVolume(volume, volume);
+                            }
                         }
 
                         @Override
                         public void onStartTrackingTouch(SeekBar seekBar) {
-
                         }
 
                         @Override
                         public void onStopTrackingTouch(SeekBar seekBar) {
-
                         }
                     }
             );
+
             isMusicPlayerInit = true;
         }
     }
 
-    class playMusic extends Thread {
+    class playMusic extends Thread { //update music labels (position, number, etc)
         String musicFilePath;
         int songDuration;
         playMusic(int position){
-            reset();
+            reset(); //resets music object
+            //visible position track and btns
             seekBar.setVisibility(View.VISIBLE);
             playbackControls.setVisibility(View.VISIBLE);
         }
         public void run(){
             isSongPlaying = true;
             while(true){
-                while(songPosition<songDuration){
+                while(songPosition<songDuration){ //plays this song
                     try {
-                        Thread.sleep(1000/playBack);
+                        Thread.sleep(50000/playSpeed); //increments in 1s
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                     if(isSongPlaying) {
-                        songPosition+= 1;
+                        songPosition+= 1; //1s passed
                         seekBar.setProgress(songPosition);
-                        updateProgress();
+                        updateProgress(); //update pos label
                     }
                 }
-                mPosition++;
-                songPositionTextView.setText("0");
-                playTrack();
+                if(loop){
+                    mp.seekTo(0);
+                    mp.start();
+                    songPosition = 0;
+                    seekBar.setProgress(songPosition);
+                    updateProgress();
+                }
+                if(!loop && next){
+                    mPosition++; //goes to next music
+                    //reset
+                    songPositionTextView.setText("0");
+                    playTrack();
+                }
             }
         }
         public void playTrack(){
             mp.pause();
+            mp.release();
             reset();
         }
         public void reset(){
-            if(mPosition >= musicFilesList.size()){
+            if(mPosition >= musicFilesList.size()){ //wrap -> out of bound error fixed
                 mPosition = 0;
             }
-            musicFilePath  = musicFilesList.get(mPosition);
-            songDuration = playMusicFile(musicFilePath)/1000;
+            musicFilePath  = musicFilesList.get(mPosition); //get music file
+            runOnUiThread(new Runnable(){
+                @Override
+                public void run(){
+                    listView.getChildAt(lastSong).setBackgroundColor(Color.WHITE);
+                    listView.getChildAt(mPosition).setBackgroundColor(Color.GRAY);
+                    lastSong = mPosition;
+                }
+            });
             songPosition = 0;
+            songDuration = playMusicFile(musicFilePath)/1000;
             seekBar.setMax(songDuration);
             seekBar.setProgress(0);
             pauseButton.setText("pause");
             isSongPlaying = true;
+            //sets label
             int durRemainder = songDuration%60;
             String dur = "";
-            if(durRemainder<10){
+            if(durRemainder<10){ //makes sure number is consistent: 01 over 1
                 dur = "0";
             }
             songDurationTextView.setText(String.valueOf(songDuration/60)+":"+dur
                     +String.valueOf(songDuration%60));
             updateProgress();
         }
-        public void updateProgress(){
+        public void updateProgress(){ //update curr position
             int posRemainder = songPosition%60;
             String pos = "";
             if(posRemainder<10){
@@ -340,3 +415,20 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 }
+
+//changes
+
+//add new page for track controls
+//sort music alphabetically
+//random
+//title on user control
+//side scrollbar + alphabet sorting
+
+//add comments
+//publish
+//allows rename
+//allows album
+//add skip button and go back button
+//add logo
+//add about page
+
