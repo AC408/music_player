@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/scrollView"
+        android:fillViewport="true">
+
+        <ListView
+            android:id="@+id/listView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"/>
+
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/playBackButton"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/currentPosition"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:paddingStart="16dp"
+            android:paddingLeft="16dp" />
+
+        <Button
+            android:id="@+id/pauseButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="pause" />
+
+        <Button
+            android:id="@+id/loopButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="loop" />
+
+        <TextView
+            android:id="@+id/songDuration"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:paddingEnd="16dp"
+            android:paddingRight="16dp" />
+
+    </LinearLayout>
+
+    <SeekBar
+        android:id="@+id/seekBar"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+
+    <LinearLayout
+        android:id="@+id/playBackSpeed"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/playbackText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="playback speed: 1"
+            android:paddingStart="16dp"
+            android:paddingLeft="16dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:id="@+id/controls"
+        android:gravity="center"
+        android:layout_marginTop="2dp">
+
+        <Button
+            android:layout_width="0dp"
+            android:layout_height="24dp"
+            android:id="@+id/prevBtn"
+            android:layout_weight="4"
+            android:layout_marginLeft="16dp"
+            android:background="@drawable/backward"
+            android:visibility="gone"/>
+
+        <SeekBar
+            android:id="@+id/playBack"
+            android:layout_width="150dp"
+            android:layout_height="wrap_content"
+            android:progress="50"
+            android:max="100"
+            android:layout_weight="12"
+            android:min="0"/>
+
+        <Button
+            android:layout_width="0dp"
+            android:layout_height="30dp"
+            android:id="@+id/nextBtn"
+            android:layout_weight="3"
+            android:layout_marginRight="16dp"
+            android:background="@drawable/forward"
+            android:visibility="gone"/>
+
+    </LinearLayout>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="1dp" android:gravity="center">
+        <ImageView android:layout_width="25dp" android:layout_height="25dp" android:src="@drawable/sound_down"/>
+        <SeekBar android:id="@+id/volumeBar" android:layout_width="300dp" android:layout_height="wrap_content" android:progress="50" android:max="100"/>
+        <ImageView android:layout_width="25dp" android:layout_height="25dp" android:src="@drawable/sound_up"/>
+    </LinearLayout>
+
+</LinearLayout>
