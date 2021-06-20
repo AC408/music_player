@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
     private List<String> musicFilesList;
     private List<String> musicFilesName;
 
-    private void addMusicFilesFrom(String dirPath){
+    private void addMusicFilesFrom(String dirPath){ //directory is Music file in Phone Storage
         final File musicDir = new File(dirPath);
         if(!musicDir.exists()){
             musicDir.mkdir();
@@ -79,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
         final File[] files = musicDir.listFiles();
         for(File file : files){
             final String path = file.getAbsolutePath();
-            if(path.endsWith(".mp3")){
+            if(path.endsWith(".mp3")||path.endsWith(".mpeg")){
                 musicFilesList.add(path);
                 musicFilesName.add(path);
             }
@@ -114,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
         } catch(Exception e){
             e.printStackTrace();
         }
-        mp.setVolume(0.5f,0.5f);
+        mp.setVolume(volume,volume);
         return mp.getDuration();
     }
 
@@ -144,6 +144,8 @@ public class MainActivity extends AppCompatActivity {
     private TextView[] musicList;
     private ScrollView scroller;
     private SeekBar verticalScroll;
+    private Button randomBtn;
+    private View playbackEffects;
 
     //when app is active
     @Override
@@ -164,7 +166,7 @@ public class MainActivity extends AppCompatActivity {
             fillMusicList();
             for(int i = 0; i<musicFilesName.size(); i++){ //remove file type in title
                 String name = musicFilesName.get(i);
-                int dot = musicFilesName.get(i).indexOf(".mp3");
+                int dot = musicFilesName.get(i).lastIndexOf(".");
                 int slash = musicFilesName.get(i).lastIndexOf("/")+1;
                 name = name.substring(slash,dot);
                 musicFilesName.set(i,name);
@@ -185,7 +187,6 @@ public class MainActivity extends AppCompatActivity {
                 musicList[i].setOnClickListener(new View.OnClickListener(){
                     @Override
                     public void onClick(View v){
-                        Log.d("run","RUnning");
                         mPosition = finalI;
                         if(firstPlay){
                             lastSong = finalI;
@@ -234,15 +235,17 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+            playbackControls = findViewById(R.id.playControl); //layout
+            playbackEffects = findViewById(R.id.playEffects); //layout
+            verticalScroll = findViewById(R.id.verticalScroll); //scroll
             songPositionTextView = findViewById(R.id.currentPosition); //text
             songDurationTextView = findViewById(R.id.songDuration); //text
+            playbackText = findViewById(R.id.playbackText); //text
             pauseButton = findViewById(R.id.pauseButton); //btn
-            playbackControls = findViewById(R.id.playBackButton);
-            playbackText = findViewById(R.id.playbackText);
-            loopBtn = findViewById(R.id.loopButton);
-            nextBtn = findViewById(R.id.nextBtn);
-            prevBtn = findViewById(R.id.prevBtn);
-            verticalScroll = findViewById(R.id.verticalScroll);
+            loopBtn = findViewById(R.id.loopButton); //btn
+            nextBtn = findViewById(R.id.nextBtn); //btn
+            prevBtn = findViewById(R.id.prevBtn); //btn
+            randomBtn = findViewById(R.id.randomButton); //btn
 
             verticalScroll.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 int progress;
@@ -340,6 +343,13 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+            randomBtn.setOnClickListener(new View.OnClickListener(){
+                @Override
+                public void onClick(View v){
+
+                }
+            });
+
             SeekBar volumeBar;
             // Volume Bar
             volumeBar = (SeekBar) findViewById(R.id.volumeBar);
@@ -377,6 +387,7 @@ public class MainActivity extends AppCompatActivity {
             playbackControls.setVisibility(View.VISIBLE);
             nextBtn.setVisibility(View.VISIBLE);
             prevBtn.setVisibility(View.VISIBLE);
+            playbackEffects.setVisibility(View.VISIBLE);
         }
         public void run(){
             isSongPlaying = true;
@@ -506,6 +517,7 @@ public class MainActivity extends AppCompatActivity {
 //alphabet sorting
 //search function
 
+//errors -> side seek changes pos
 
 //https://programmer.group/5c44cf15f28a9.html
 //alphabetical sorting, sorting with chinese chars
